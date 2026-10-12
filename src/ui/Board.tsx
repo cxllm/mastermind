@@ -20,7 +20,7 @@ class Board extends React.Component<
 		super(props);
 		// Global, modifiable properties
 		this.state = {
-			sequence: [],
+			sequence: this.generateSequence(props.colours),
 			// This states whether or not the row is active
 			rows: Array(NumberOfRows).fill(false),
 			won: false,
@@ -35,9 +35,14 @@ class Board extends React.Component<
 		nextProps: Readonly<{ colours: Colour[] }>,
 		nextContext: any
 	): void {
-		// gets the colours when the user selects a difficulty, and then updates the sequence to use these colours
-		this.setState({ colours: nextProps.colours });
-		this.setState({ sequence: this.generateSequence(nextProps.colours) });
+		// Only pick a new sequence when the colour set (difficulty) actually changes.
+		// Previously this ran on EVERY parent re-render (e.g. opening "How to Play"), swapping the answer mid-game.
+		if (nextProps.colours !== this.props.colours) {
+			this.setState({
+				colours: nextProps.colours,
+				sequence: this.generateSequence(nextProps.colours)
+			});
+		}
 	}
 	// Generates the random sequence of colours.
 	generateSequence(colours: Colour[]): Colour[] {

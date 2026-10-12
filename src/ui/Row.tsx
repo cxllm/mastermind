@@ -114,62 +114,31 @@ class Row extends React.Component<
 	submitRow = () => {
 		// Set this row to inactive
 		this.setState({ active: false });
-		// this array contains one element for each guess, and its contents are []
-		let guesses = Array(4);
-		// the count variable so that the same colour in the sequence is only accounted for once.
-		let count = this.state.count;
-		// gets the counts in the sequence for each colour
-		for (let colour of this.state.sequence) {
-			//@ts-ignore
-			count[colour[0]].total++;
-		}
-		console.log(count);
-		// gets the guesses that are correct in both colour and position
-		for (let i in this.state.colours) {
-			//@ts-ignore
-			let guess: Colour = this.state.colours[i];
-			if (guess[0] === this.state.sequence[i][0]) {
-				count[guess[0]].correctPlace++;
-				guesses[i] = [true];
+		const sequence = this.state.sequence;
+		const guess = this.state.colours as Colour[];
+		// guesses[i] = [correctColourAndPlace, correctColourWrongPlace]
+		const guesses: boolean[][] = guess.map(() => [false, false]);
+		// How many of each colour in the sequence are still unmatched
+		const remaining: Record<string, number> = {};
+		// Pass 1: exact matches (right colour, right place). These are removed from the pool first
+		for (let i = 0; i < sequence.length; i++) {
+			if (guess[i][0] === sequence[i][0]) {
+				guesses[i] = [true, true];
 			} else {
-				guesses[i] = [false];
+				remaining[sequence[i][0]] = (remaining[sequence[i][0]] ?? 0) + 1;
 			}
 		}
-		// gets the guesses that are correct in only colour not position.
-		for (let i in this.state.colours) {
-			if (guesses[i][0] === true) {
-				guesses[i].push(true);
-				continue;
-			}
-			//@ts-ignore
-			let guess: Colour = this.state.colours[i];
-			let cColour = count[guess[0]];
-			console.log(cColour);
-			let total = cColour.correctPlace + cColour.inArray;
-			for (let j of this.state.sequence) {
-				if (j[0] === guess[0]) {
-					if (total < cColour.total) {
-						console.log(j[0]);
-						guesses[i].push(true);
-						count[guess[0]].inArray++;
-						total++;
-						console.log(total);
-					}
-				}
-			}
-			if (guesses[i].length < 2) {
-				guesses[i].push(false);
+		// Pass 2: right colour, wrong place. Each unmatched sequence peg can only be used once
+		for (let i = 0; i < guess.length; i++) {
+			if (guesses[i][0]) continue;
+			if ((remaining[guess[i][0]] ?? 0) > 0) {
+				remaining[guess[i][0]]--;
+				guesses[i][1] = true;
 			}
 		}
 		// update the state so the checkColour method will work
 		this.setState({ checked: guesses });
-		let won = true;
-		for (let guess of guesses) {
-			if (guess[0] === false) {
-				won = false;
-				break;
-			}
-		}
+		const won = guesses.every((g) => g[0]);
 		this.props.submitRow(this.props.id, won);
 	};
 	// Sets the specific circle to a specific colour.
